@@ -1,0 +1,309 @@
+{
+  "info": {
+    "_postman_id": "93f91231-b9bd-5e04-b4f3-f2bfbd3130c1",
+    "name": "Ballpoint Marketing API",
+    "description": "Routes from the Ballpoint developer docs. Choose the staging or production environment and paste your API key. Run the requests in order; Create an order saves order_id. To create another order, clear create_key and upload_key.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Quote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/billing/orders/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "billing",
+                "orders",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_type\": \"4x6_printed\",\n  \"postage_type\": \"first_class\",\n  \"piece_count\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Checks the key and returns the price. Creates nothing."
+          }
+        },
+        {
+          "name": "Create an order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{create_key}}",
+                "description": "Kept in the create_key collection variable so a retry reuses it. Clear the variable to start a new order."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"4x6_printed\",\n  \"product_type\": \"4x6_printed\",\n  \"postage_type\": \"first_class\",\n  \"postcard_size\": \"4x6\",\n  \"pieces\": 2,\n  \"list_id\": \"onboarding-demo\",\n  \"external_id\": \"onboarding-demo\",\n  \"external_user_id\": \"onboarding-user\",\n  \"sender\": {\n    \"name\": \"Example Integration\",\n    \"address\": \"10 Example Way\",\n    \"city\": \"Austin\",\n    \"state\": \"TX\",\n    \"zip\": \"78701\"\n  },\n  \"canvas_json\": {\n    \"front\": {\n      \"version\": \"5.3.0\",\n      \"width\": 600,\n      \"height\": 408,\n      \"background\": \"#ffffff\",\n      \"objects\": [\n        {\n          \"type\": \"textbox\",\n          \"left\": 40,\n          \"top\": 50,\n          \"width\": 520,\n          \"fontSize\": 28,\n          \"fontFamily\": \"Arial\",\n          \"fill\": \"#162539\",\n          \"text\": \"Staging integration sample\",\n          \"originX\": \"left\",\n          \"originY\": \"top\"\n        },\n        {\n          \"type\": \"textbox\",\n          \"left\": 40,\n          \"top\": 120,\n          \"width\": 520,\n          \"fontSize\": 22,\n          \"fontFamily\": \"Arial\",\n          \"fill\": \"#162539\",\n          \"text\": \"Hello {{first_name}}\",\n          \"originX\": \"left\",\n          \"originY\": \"top\"\n        },\n        {\n          \"type\": \"textbox\",\n          \"left\": 40,\n          \"top\": 190,\n          \"width\": 520,\n          \"fontSize\": 16,\n          \"fontFamily\": \"Arial\",\n          \"fill\": \"#162539\",\n          \"text\": \"Fictional sample. Not approved for mailing.\",\n          \"originX\": \"left\",\n          \"originY\": \"top\"\n        }\n      ]\n    },\n    \"back\": {\n      \"version\": \"5.3.0\",\n      \"width\": 600,\n      \"height\": 408,\n      \"background\": \"#ffffff\",\n      \"objects\": [\n        {\n          \"type\": \"textbox\",\n          \"left\": 24,\n          \"top\": 160,\n          \"width\": 170,\n          \"fontSize\": 14,\n          \"fontFamily\": \"Arial\",\n          \"fill\": \"#162539\",\n          \"text\": \"Integration sample\",\n          \"originX\": \"left\",\n          \"originY\": \"top\"\n        }\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sample order with two-sided artwork. Upload the recipients next."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('create_key')) pm.collectionVariables.set('create_key', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = pm.response.json().id;",
+                  "if (id) pm.collectionVariables.set('order_id', id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload recipients",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{upload_key}}",
+                "description": "Kept in the upload_key collection variable so a retry reuses it. Clear the variable to start a new order."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/billing/orders/{{order_id}}/recipients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "billing",
+                "orders",
+                "{{order_id}}",
+                "recipients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipients\": [\n    {\n      \"first_name\": \"Alex\",\n      \"last_name\": \"One\",\n      \"address\": \"1 Example Way\",\n      \"city\": \"Austin\",\n      \"state\": \"TX\",\n      \"zip\": \"78701\",\n      \"contact_id\": \"onboarding-001\",\n      \"address_type\": \"MAILING\"\n    },\n    {\n      \"first_name\": \"Taylor\",\n      \"last_name\": \"Two\",\n      \"address\": \"2 Example Lane\",\n      \"city\": \"Austin\",\n      \"state\": \"TX\",\n      \"zip\": \"78701\",\n      \"contact_id\": \"onboarding-002\",\n      \"address_type\": \"MAILING\"\n    }\n  ],\n  \"append\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Check rejected and ready in the response."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('upload_key')) pm.collectionVariables.set('upload_key', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get an order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/billing/orders/{{order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "billing",
+                "orders",
+                "{{order_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Order tracking",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/mail-tracking",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "orders",
+                "{{order_id}}",
+                "mail-tracking"
+              ]
+            },
+            "description": "404 ORDER_NOT_MAILED until the order is mailed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Print jobs",
+      "item": [
+        {
+          "name": "Request a PDF upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/print-jobs/upload-url",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "print-jobs",
+                "upload-url"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_id\": \"batch-2026-09-25\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Upload the PDF to the returned form before submitting."
+          }
+        },
+        {
+          "name": "Submit a print job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Partner-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/print-jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "print-jobs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_id\": \"batch-2026-09-25\",\n  \"booklet_count\": 120,\n  \"pages_per_booklet\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "create_key",
+      "value": ""
+    },
+    {
+      "key": "upload_key",
+      "value": ""
+    }
+  ]
+}

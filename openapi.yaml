@@ -1,0 +1,688 @@
+openapi: 3.1.0
+info:
+  title: Ballpoint Marketing API
+  version: '2026-11-17'
+  description: 'Direct mail API: quote, create orders with artwork, upload recipients, follow production
+    and USPS tracking, print jobs. Guides: README.md and START_HERE.md.'
+servers:
+- url: https://staging-api.ballpointmarketing.com
+  description: Staging (nothing is mailed)
+- url: https://api.ballpointmarketing.com
+  description: Production
+security:
+- apiKey: []
+tags:
+- name: Quote
+- name: Orders
+- name: Tracking
+- name: Print jobs
+paths:
+  /v1/billing/orders/preview:
+    post:
+      operationId: quoteOrder
+      tags:
+      - Quote
+      summary: Quote an order
+      description: Price and account limit checks for a product, postage class and quantity. Creates nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400': &id001
+          description: Invalid request, product not available or price not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401': &id002
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403': &id003
+          description: Key not allowed for this route, or account inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422': &id004
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429': &id005
+          description: Rate limited; retry after Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders:
+    post:
+      operationId: createOrder
+      tags:
+      - Orders
+      summary: Create an order
+      description: Creates one order with its artwork. Upload the recipients next.
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        schema: &id006
+          type: string
+          maxLength: 255
+        description: Save it with the body; retry a lost response with the same key and body.
+        required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '200':
+          description: Order created, or the original response of a retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreateResponse'
+        '400': *id001
+        '401': *id002
+        '402': &id010
+          description: Prepaid balance or account limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403': *id003
+        '409': &id007
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422': *id004
+        '429': *id005
+        '503': &id011
+          description: Temporarily unavailable; retry after Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/billing/orders/{order_id}/recipients:
+    post:
+      operationId: uploadRecipients
+      tags:
+      - Orders
+      summary: Upload recipients
+      description: Up to 10,000 recipients per request. Check rejected and ready in the response.
+      parameters:
+      - &id008
+        name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Order identifier, for example ord_7f3a2b.
+      - name: Idempotency-Key
+        in: header
+        schema: *id006
+        description: Save it with the body; retry a lost response with the same key and body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientUploadRequest'
+      responses:
+        '200':
+          description: Upload receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientUploadResponse'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '404': &id009
+          description: Not found, or it belongs to another account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409': *id007
+        '422': *id004
+        '429': *id005
+  /v1/billing/orders/{order_id}:
+    get:
+      operationId: getOrder
+      tags:
+      - Orders
+      summary: Get an order
+      parameters:
+      - *id008
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401': *id002
+        '403': *id003
+        '404': *id009
+        '429': *id005
+  /v1/orders/{order_id}/mail-tracking:
+    get:
+      operationId: getOrderTracking
+      tags:
+      - Tracking
+      summary: Order tracking
+      description: USPS tracking summary. 404 ORDER_NOT_MAILED while the order has not been mailed.
+      parameters:
+      - *id008
+      responses:
+        '200':
+          description: Tracking summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailTracking'
+        '401': *id002
+        '403': *id003
+        '404': *id009
+        '429': *id005
+  /v1/print-jobs/upload-url:
+    post:
+      operationId: requestPrintJobUpload
+      tags:
+      - Print jobs
+      summary: Request a PDF upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintJobUploadRequest'
+      responses:
+        '200':
+          description: Upload form
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintJobUploadResponse'
+        '401': *id002
+        '403': *id003
+        '409': *id007
+        '422': *id004
+        '429': *id005
+  /v1/print-jobs:
+    post:
+      operationId: submitPrintJob
+      tags:
+      - Print jobs
+      summary: Submit a print job
+      description: Validates the uploaded PDF and creates one order for the batch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintJobRequest'
+      responses:
+        '201':
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintJobResponse'
+        '200':
+          description: Same job submitted again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintJobResponse'
+        '400': *id001
+        '401': *id002
+        '402': *id010
+        '403': *id003
+        '409': *id007
+        '422': *id004
+        '429': *id005
+        '503': *id011
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Partner-Key
+  schemas:
+    QuoteRequest:
+      type: object
+      properties:
+        product_type: &id012
+          type: string
+          description: Product type, for example 4x6_printed or 6x9_printed.
+        postage_type: &id013
+          type: string
+          enum:
+          - first_class
+          - standard
+          description: Postage class.
+        piece_count:
+          type: integer
+          minimum: 1
+          description: Number of pieces.
+      required:
+      - product_type
+      - piece_count
+    QuoteResponse:
+      type: object
+      properties:
+        product_type: *id012
+        postage_type: *id013
+        piece_count: &id014
+          type: integer
+        unit_price_tcents:
+          type: integer
+          description: Your price per piece, in tcents (10,000 per US dollar).
+        total_tcents:
+          type: integer
+          description: Your total price, in tcents.
+        total_dollars:
+          type: string
+          description: Total price as text.
+        balance_cents:
+          anyOf:
+          - *id014
+          - type: 'null'
+          description: Prepaid balance before the order, on prepaid accounts.
+        balance_after_cents:
+          anyOf:
+          - *id014
+          - type: 'null'
+          description: Prepaid balance after the order, on prepaid accounts.
+        limits:
+          type: object
+          properties:
+            passed:
+              type: boolean
+            checks:
+              type: array
+              items:
+                type: object
+          description: Account limit checks; passed=false means creating the order would fail.
+    Sender:
+      type: object
+      properties:
+        name: &id015
+          type: string
+        address: *id015
+        city: *id015
+        state:
+          type: string
+          description: Two-letter state.
+        zip: *id015
+    OrderCreateRequest:
+      type: object
+      properties:
+        product_id:
+          type: string
+          description: Product identifier, for example 4x6_printed.
+        product_type: *id012
+        postage_type: *id013
+        postcard_size:
+          type: string
+          enum:
+          - 4x6
+          - 6x9
+          description: Postcard size.
+        pieces:
+          type: integer
+          minimum: 1
+          description: Number of pieces; must match the recipients you upload.
+        canvas_json:
+          type: object
+          description: 'Fabric.js canvas with the artwork, as {front, back}. Images as data: URIs.'
+        sender:
+          $ref: '#/components/schemas/Sender'
+          description: Return address printed on the piece.
+        list_id:
+          type: string
+          maxLength: 128
+          description: Your grouping key.
+        external_id:
+          type: string
+          description: Your own reference for the order.
+        external_user_id:
+          type: string
+          description: Your identifier for the end user; echoed on webhooks.
+        mail_date:
+          type: string
+          format: date
+          description: The order waits as scheduled until its production date.
+        expected_retail_unit_price_tcents:
+          type: integer
+          description: Quoted price per piece. A different current price returns 409 PRICE_QUOTE_STALE.
+        expected_retail_total_price_tcents:
+          type: integer
+          description: Quoted total. A different current total returns 409 PRICE_QUOTE_STALE.
+      required:
+      - product_id
+      - pieces
+    OrderCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Order identifier.
+        external_id:
+          anyOf:
+          - *id015
+          - type: 'null'
+          description: Your reference, as sent.
+        campaign_id:
+          type: string
+          description: Ballpoint campaign that groups orders with the same list_id.
+        status:
+          type: string
+          description: accepted, or scheduled with a future mail_date.
+        scheduled_production_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Derived from mail_date.
+        created_at: &id016
+          type: string
+          format: date-time
+      required:
+      - id
+      - status
+    Recipient:
+      type: object
+      properties:
+        first_name: *id015
+        last_name: *id015
+        company:
+          anyOf:
+          - *id015
+          - type: 'null'
+        address: *id015
+        address2:
+          anyOf:
+          - *id015
+          - type: 'null'
+        city: *id015
+        state:
+          type: string
+          description: Two-letter state.
+        zip:
+          type: string
+          description: 5 or 5+4 digits.
+        contact_id:
+          type: string
+          maxLength: 64
+          description: Your identifier for the recipient, returned as sent.
+        address_type:
+          type: string
+          enum:
+          - MAILING
+          - PROPERTY
+      required:
+      - address
+      - city
+      - state
+      - zip
+    RecipientUploadRequest:
+      type: object
+      properties:
+        recipients:
+          type: array
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/Recipient'
+        append:
+          type: boolean
+          default: false
+          description: false replaces the order's recipients; true adds to them.
+      required:
+      - recipients
+    RejectedRecipient:
+      type: object
+      properties:
+        index: *id014
+        reason: *id015
+      required:
+      - index
+      - reason
+    RecipientUploadResponse:
+      type: object
+      properties:
+        order_id: *id015
+        accepted: *id014
+        rejected: *id014
+        rejected_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/RejectedRecipient'
+        total_recipients: *id014
+        piece_count: *id014
+        ready:
+          type: boolean
+          description: True when the order has exactly as many recipients as pieces.
+      required:
+      - order_id
+      - accepted
+      - rejected
+      - total_recipients
+      - piece_count
+      - ready
+    Order:
+      type: object
+      properties:
+        id: *id015
+        campaign_id: *id015
+        external_user_id:
+          anyOf:
+          - *id015
+          - type: 'null'
+        product_type: *id015
+        postage_type: *id015
+        piece_count: *id014
+        production_status:
+          type: string
+          description: Fulfillment status; moves forward only.
+        usps_status:
+          anyOf:
+          - *id015
+          - type: 'null'
+          description: shipped, out_for_delivery or delivered; null until scans arrive.
+        display_status:
+          type: string
+          description: The single status to show your users.
+        render_status:
+          anyOf:
+          - *id015
+          - type: 'null'
+          description: Print file generation status.
+        sla_due_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+        status_changed_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+        created_at: *id016
+        cancelled_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+      required:
+      - id
+      - production_status
+      - display_status
+    MailTracking:
+      type: object
+      properties:
+        mail_status:
+          type: string
+          enum:
+          - shipped
+          - in_transit
+          - out_for_delivery
+          - delivered
+        mail_status_label: *id015
+        total_pieces: *id014
+        scanned_pieces: *id014
+        scan_coverage: &id017
+          type: number
+        delivered: *id014
+        in_transit: *id014
+        out_for_delivery: *id014
+        rts: *id014
+        forwarded: *id014
+        delivered_rate: *id017
+        rts_rate: *id017
+        first_scan_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+        last_scan_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+        last_updated_at:
+          anyOf:
+          - *id016
+          - type: 'null'
+    PrintJobUploadRequest:
+      type: object
+      properties:
+        external_id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          description: Your unique ID for the batch.
+      required:
+      - external_id
+    PrintJobUploadResponse:
+      type: object
+      properties:
+        external_id: *id015
+        upload:
+          type: object
+          properties:
+            method:
+              type: string
+              const: POST
+            url:
+              type: string
+              format: uri
+            fields:
+              type: object
+              additionalProperties: *id015
+              description: Send every entry as a form field before the file.
+            expires_at: *id016
+            max_bytes: *id014
+          required:
+          - method
+          - url
+          - fields
+          - expires_at
+          - max_bytes
+      required:
+      - external_id
+      - upload
+    PrintJobRequest:
+      type: object
+      properties:
+        external_id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        booklet_count:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        pages_per_booklet:
+          type: integer
+          minimum: 4
+          maximum: 32
+          multipleOf: 4
+          description: booklet_count x pages_per_booklet must not exceed 40,000.
+      required:
+      - external_id
+      - booklet_count
+      - pages_per_booklet
+    PrintJobResponse:
+      type: object
+      properties:
+        order_id: *id015
+        external_id: *id015
+        booklet_count: *id014
+        pages_per_booklet: *id014
+        production_status: *id015
+      required:
+      - order_id
+      - external_id
+      - booklet_count
+      - pages_per_booklet
+      - production_status
+    Error:
+      type: object
+      properties:
+        detail:
+          type: object
+          properties:
+            error:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Error class, for example validation_error or not_found.
+                code:
+                  type: string
+                  description: Machine-readable code; see docs/errors.md.
+                message: *id015
+                trace_id:
+                  type: string
+                  description: Quote it in support requests.
+              required:
+              - type
+              - code
+              - message
+          required:
+          - error
+      required:
+      - detail
+    ValidationErrorResponse:
+      type: object
+      properties:
+        detail:
+          oneOf:
+          - type: array
+            items:
+              type: object
+              properties:
+                loc:
+                  type: array
+                  items: {}
+                msg: *id015
+                type: *id015
+              required:
+              - loc
+              - msg
+              - type
+          - type: object
+      required:
+      - detail
+      description: Either a list of field errors or the detail.error object.
