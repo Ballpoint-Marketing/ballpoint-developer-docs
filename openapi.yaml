@@ -443,6 +443,7 @@ components:
       - city
       - state
       - zip
+      description: At least one of first_name or last_name is required.
     RecipientUploadRequest:
       type: object
       properties:
