@@ -64,7 +64,7 @@ curl -X POST https://staging-api.ballpointmarketing.com/v1/billing/orders/previe
 }
 ```
 
-`unit_price_tcents` and `total_tcents` are your price. If `limits.passed` is `false`, creating that order would fail with `402`; show the reason before you submit. The response can carry further fields (for example `balance_cents` and `balance_after_cents` on prepaid accounts); ignore any you do not use. The products and postage classes your account can order are agreed during onboarding; the quote rejects any other combination.
+`unit_price_tcents` and `total_tcents` are your price. If `limits.passed` is `false`, creating that order would fail with `402`; show the reason before you submit. The response can carry further fields (for example `balance_cents` and `balance_after_cents` on prepaid accounts); ignore any you do not use. The products and postage classes your account can order are agreed during onboarding; the quote rejects any other combination. Letters cannot be quoted through this route yet; your Ballpoint contact gives you their prices.
 
 ## Create an order
 
@@ -78,12 +78,16 @@ Creates one order with its artwork. The order is printed for the recipients you 
 | Field | Required | Description |
 |---|---|---|
 | `product_id` | Yes | Product identifier, for example `4x6_printed`. |
-| `product_type` | Recommended | Canonical product type, for example `4x6_printed` or `6x9_printed`. |
-| `postage_type` | Recommended | `first_class` or `standard` for printed postcards. Defaults to `first_class`. |
+| `product_type` | Recommended | Canonical product type, for example `4x6_printed`, `6x9_printed`, `color_letter`, `hybrid_letter` or `greeting_letter`. |
+| `postage_type` | Recommended | `first_class` or `standard` for printed postcards and Color Letter; `first_class` for Hybrid and Greeting letters. Defaults to `first_class`. |
 | `postcard_size` | For postcards | `4x6` or `6x9`. |
 | `pieces` | Yes | Number of pieces; must match the number of recipients you upload. |
-| `canvas_json` | For printed cards | Fabric.js canvas with the artwork, as `{ "front": …, "back": … }`. Images go inline as `data:` URIs (PNG, JPEG or WebP). Ballpoint adds the address block and postage; do not draw them. |
-| `sender` | Recommended | Return address printed on the piece: `name`, `address`, `city`, `state`, `zip`. |
+| `canvas_json` | For postcards and Color Letter | Fabric.js canvas with the artwork. Postcards send `{ "front": …, "back": … }`; Color Letter sends `{ "front": … }` only (see [Letters](#letters)). Images go inline as `data:` URIs (PNG, JPEG or WebP). On postcards Ballpoint adds the address block and postage; do not draw them. |
+| `sender` | Recommended | Return address: `name`, `address`, `city`, `state`, `zip`. Printed on postcards and written on the envelope of letters. Hybrid and Greeting letters also print `website`. |
+| `message` | Optional | The letter text, needed for Hybrid and Greeting letters. It is not checked when the order is created: a card without it carries only your logo and website. See [Letters](#letters). |
+| `message_parts` | Optional | Greeting Letter text split into `greeting`, `body` and `signature` (`body` required). If you also send `message`, it must equal the parts joined by a blank line. |
+| `logo` | Optional | Logo printed on Hybrid and Greeting letters, as a base64 `data:image` URI (PNG, JPEG, GIF or WebP, up to 450 KB). |
+| `print_font` | Optional | Handwriting style for the parts written by hand: `cursive` or `printed`. |
 | `list_id` | Recommended | Your grouping key (up to 128 characters). Orders that share a `list_id` belong to one Ballpoint campaign. |
 | `external_id` | Recommended | Your own reference for the order. |
 | `external_user_id` | Optional | Your identifier for the end user the order belongs to; echoed on webhooks. |
@@ -108,6 +112,26 @@ Response `200`:
 The response can carry further fields; ignore any you do not use.
 
 The order identifier is **`id`**. Without a `mail_date` the initial status is `accepted`; with a future one it is `scheduled`. Retrying with the same `Idempotency-Key` and body returns the same order (see [Idempotency](#idempotency)).
+
+## Letters
+
+Letters go in an envelope. Ballpoint addresses the envelope by hand and applies the postage, so nothing on the letter itself needs to be left clear for an address or a stamp. None of the three letters has a back side.
+
+| `product_type` | What is printed | What is written by hand | Artwork you send |
+|---|---|---|---|
+| `color_letter` | One full-color 8.5 x 11 page, folded into a #10 envelope | The envelope address | `canvas_json.front` |
+| `hybrid_letter` | A 6.57 x 5 inch card: your logo at the top, the message in a handwriting-style font, your website at the bottom | The envelope address | `message`, `logo`, `sender.website` |
+| `greeting_letter` | A 6.57 x 5 inch card: your logo and your website | The message, written in pen after the card is cut, and the envelope address | `message` or `message_parts`, `logo`, `sender.website` |
+
+**Color Letter.** Send the page as `canvas_json.front` with `width: 816` and `height: 1056` (96 canvas units per inch). The canvas is not scaled: a smaller canvas prints in the top-left corner of the page and anything beyond 816 x 1056 is cut. A Color Letter without a non-empty `canvas_json.front` is rejected.
+
+**Hybrid Letter.** The card has a fixed layout and does not use `canvas_json`. Send the letter text in `message`; it is what gets printed.
+
+**Greeting Letter.** The card has a fixed layout and does not use `canvas_json`. Keep the message to about 350 characters with no paragraph breaks, so it fits the card at the normal handwriting size.
+
+Letters are mailed in a plain white envelope. Letters are enabled per account, and so are decorated envelopes: ask your Ballpoint contact before your first letter order.
+
+On staging, a Color Letter order produces a print file (`render_status` reaches `complete`). Hybrid and Greeting cards are produced at print time, so an order sent as described here, without `canvas_json`, gets no print file on staging. There is no visual proof route; build your preview from the sizes above.
 
 ## Upload recipients
 
@@ -335,6 +359,7 @@ With a `mail_date`, Ballpoint schedules production that many business days (Mond
 | `product_type` | Business days |
 |---|---|
 | `4x6_printed`, `6x9_printed` | 3 |
+| `color_letter`, `hybrid_letter`, `greeting_letter` | 6 |
 
 ## Not available through the API
 
