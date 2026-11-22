@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Ballpoint Marketing API
-  version: '2026-11-17'
+  version: '2026-11-22'
   description: 'Direct mail API: quote, create orders with artwork, upload recipients, follow production
     and USPS tracking, print jobs. Guides: README.md and START_HERE.md.'
 servers:
@@ -271,7 +271,8 @@ components:
       properties:
         product_type: &id012
           type: string
-          description: Product type, for example 4x6_printed or 6x9_printed.
+          description: Product type, for example 4x6_printed or 6x9_printed. Letters cannot be quoted
+            here yet.
         postage_type: &id013
           type: string
           enum:
@@ -332,13 +333,33 @@ components:
           type: string
           description: Two-letter state.
         zip: *id015
+        website:
+          type: string
+          description: Printed at the foot of Hybrid and Greeting letters.
+    MessageParts:
+      type: object
+      properties:
+        greeting:
+          type: string
+          description: Opening line, for example Hi Sam,
+        body:
+          type: string
+          description: The letter text.
+        signature:
+          type: string
+          description: Closing and name.
+      required:
+      - body
     OrderCreateRequest:
       type: object
       properties:
         product_id:
           type: string
           description: Product identifier, for example 4x6_printed.
-        product_type: *id012
+        product_type:
+          type: string
+          description: Product type, for example 4x6_printed, 6x9_printed, color_letter, hybrid_letter
+            or greeting_letter.
         postage_type: *id013
         postcard_size:
           type: string
@@ -352,10 +373,29 @@ components:
           description: Number of pieces; must match the recipients you upload.
         canvas_json:
           type: object
-          description: 'Fabric.js canvas with the artwork, as {front, back}. Images as data: URIs.'
+          description: 'Fabric.js canvas with the artwork. Postcards: {front, back}. Color Letter: {front}
+            only, 816 x 1056. Not used by Hybrid or Greeting letters. Images as data: URIs.'
         sender:
           $ref: '#/components/schemas/Sender'
-          description: Return address printed on the piece.
+          description: Return address, printed on postcards and written on letters.
+        message:
+          type: string
+          description: Letter text, needed for Hybrid and Greeting letters. Not checked when the order
+            is created.
+        message_parts:
+          $ref: '#/components/schemas/MessageParts'
+          description: Greeting letter text split into greeting, body and signature. If message is also
+            sent, it must equal the parts joined by a blank line.
+        logo:
+          type: string
+          description: Logo printed on Hybrid and Greeting letters, as a base64 data:image URI (PNG, JPEG,
+            GIF or WebP, up to 450 KB).
+        print_font:
+          type: string
+          enum:
+          - cursive
+          - printed
+          description: Handwriting style for the parts written by hand.
         list_id:
           type: string
           maxLength: 128
