@@ -2,6 +2,10 @@
 
 Changes to the routes, fields and events documented in this repository.
 
+## Unreleased
+
+- `POST /orders` now checks Hybrid and Greeting letters when the order is created. A missing message, a logo that is not an inline `data:image`, or text the card cannot hold returns `400 INVALID_PRODUCT_CONFIG`; a temporary failure of the check returns `503 LETTER_CHECK_UNAVAILABLE`.
+
 ## 2026-11-22
 
 - Documented the three letters (`color_letter`, `hybrid_letter`, `greeting_letter`) in a new [Letters](docs/api-reference.md#letters) section: sizes, what is printed and what is written by hand, and the fields each one uses.

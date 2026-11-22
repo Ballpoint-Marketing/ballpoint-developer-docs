@@ -84,9 +84,9 @@ Creates one order with its artwork. The order is printed for the recipients you 
 | `pieces` | Yes | Number of pieces; must match the number of recipients you upload. |
 | `canvas_json` | For postcards and Color Letter | Fabric.js canvas with the artwork. Postcards send `{ "front": …, "back": … }`; Color Letter sends `{ "front": … }` only (see [Letters](#letters)). Images go inline as `data:` URIs (PNG, JPEG or WebP). On postcards Ballpoint adds the address block and postage; do not draw them. |
 | `sender` | Recommended | Return address: `name`, `address`, `city`, `state`, `zip`. Printed on postcards and written on the envelope of letters. Hybrid and Greeting letters also print `website`. |
-| `message` | Optional | The letter text, needed for Hybrid and Greeting letters. It is not checked when the order is created: a card without it carries only your logo and website. See [Letters](#letters). |
+| `message` | For Hybrid and Greeting letters | The letter text. Greeting letters can send `message_parts` instead. See [Letters](#letters). |
 | `message_parts` | Optional | Greeting Letter text split into `greeting`, `body` and `signature` (`body` required). If you also send `message`, it must equal the parts joined by a blank line. |
-| `logo` | Optional | Logo printed on Hybrid and Greeting letters, as a base64 `data:image` URI (PNG, JPEG, GIF or WebP, up to 450 KB). |
+| `logo` | Optional | Logo printed on Hybrid and Greeting letters, as a base64 `data:image` URI (PNG, JPEG, GIF or WebP, up to 450 KB). A link is not accepted. |
 | `print_font` | Optional | Handwriting style for the parts written by hand: `cursive` or `printed`. |
 | `list_id` | Recommended | Your grouping key (up to 128 characters). Orders that share a `list_id` belong to one Ballpoint campaign. |
 | `external_id` | Recommended | Your own reference for the order. |
@@ -128,6 +128,8 @@ Letters go in an envelope. Ballpoint addresses the envelope by hand and applies 
 **Hybrid Letter.** The card has a fixed layout and does not use `canvas_json`. Send the letter text in `message`; it is what gets printed.
 
 **Greeting Letter.** The card has a fixed layout and does not use `canvas_json`. Keep the message to about 350 characters with no paragraph breaks, so it fits the card at the normal handwriting size.
+
+Hybrid and Greeting orders are checked when you create them. A missing message, a logo that is not a readable inline `data:image`, or a message or website that does not fit the card is rejected with `400 INVALID_PRODUCT_CONFIG`, and `error.message` says what to change. If the check is briefly unavailable you get `503 LETTER_CHECK_UNAVAILABLE`; retry later with the same `Idempotency-Key`.
 
 Letters are mailed in a plain white envelope. Letters are enabled per account, and so are decorated envelopes: ask your Ballpoint contact before your first letter order.
 

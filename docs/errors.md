@@ -49,6 +49,8 @@ Codes you are likely to meet:
 | `IDEMPOTENCY_KEY_REQUIRED` | `400`: `POST /orders` was sent without an `Idempotency-Key`. |
 | `ORDER_LIMIT_EXCEEDED`, `DAILY_LIMIT_EXCEEDED`, `MONTHLY_LIMIT_EXCEEDED` | `402`: the order exceeds a spending limit agreed for your account. The quote reports the same checks in `limits`. |
 | `INSUFFICIENT_SCOPE` | `required_scope: null` means the route is not available to your key. Ask Ballpoint. |
+| `INVALID_PRODUCT_CONFIG` | `400`: the order does not fit the product, for example a Hybrid or Greeting letter without a message or with a logo or text the card cannot hold. `error.message` says what to change. |
+| `LETTER_CHECK_UNAVAILABLE` | `503`: a Hybrid or Greeting letter could not be checked right now. Retry later with the same `Idempotency-Key`. |
 | `NO_PRICING` | The product or postage is not priced for your account. Do not proceed with a guessed price. |
 | `PRICE_QUOTE_STALE` | The price changed after your quote. Get a new quote, show it, then create the order with a new idempotency key. |
 | `IDEMPOTENCY_KEY_IN_PROGRESS` | Wait for `Retry-After`, then send the same request with the same key. |

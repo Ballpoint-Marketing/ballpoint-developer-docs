@@ -380,8 +380,8 @@ components:
           description: Return address, printed on postcards and written on letters.
         message:
           type: string
-          description: Letter text, needed for Hybrid and Greeting letters. Not checked when the order
-            is created.
+          description: 'Letter text. Required for Hybrid and Greeting letters (or message_parts on Greeting):
+            an order without it, or with text the card cannot hold, is rejected with 400 INVALID_PRODUCT_CONFIG.'
         message_parts:
           $ref: '#/components/schemas/MessageParts'
           description: Greeting letter text split into greeting, body and signature. If message is also
@@ -389,7 +389,7 @@ components:
         logo:
           type: string
           description: Logo printed on Hybrid and Greeting letters, as a base64 data:image URI (PNG, JPEG,
-            GIF or WebP, up to 450 KB).
+            GIF or WebP, up to 450 KB). A link or an unreadable image is rejected with 400 INVALID_PRODUCT_CONFIG.
         print_font:
           type: string
           enum:
