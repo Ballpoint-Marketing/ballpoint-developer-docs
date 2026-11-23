@@ -381,7 +381,9 @@ components:
         message:
           type: string
           description: 'Letter text. Required for Hybrid and Greeting letters (or message_parts on Greeting):
-            an order without it, or with text the card cannot hold, is rejected with 400 INVALID_PRODUCT_CONFIG.'
+            an order without it, or with text the card cannot hold, is rejected with 400 INVALID_PRODUCT_CONFIG.
+            On Hybrid letters {first_name} or {{first_name}} is replaced with the recipient''s first name;
+            any other tag is rejected.'
         message_parts:
           $ref: '#/components/schemas/MessageParts'
           description: Greeting letter text split into greeting, body and signature. If message is also
