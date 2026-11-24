@@ -64,7 +64,7 @@ curl -X POST https://staging-api.ballpointmarketing.com/v1/billing/orders/previe
 }
 ```
 
-`unit_price_tcents` and `total_tcents` are your price. If `limits.passed` is `false`, creating that order would fail with `402`; show the reason before you submit. The response can carry further fields (for example `balance_cents` and `balance_after_cents` on prepaid accounts); ignore any you do not use. The products and postage classes your account can order are agreed during onboarding; the quote rejects any other combination. Letters cannot be quoted through this route yet; your Ballpoint contact gives you their prices.
+`unit_price_tcents` and `total_tcents` are your price. If `limits.passed` is `false`, creating that order would fail with `402`; show the reason before you submit. The response can carry further fields (for example `balance_cents` and `balance_after_cents` on prepaid accounts); ignore any you do not use. The products and postage classes your account can order are agreed during onboarding; the quote rejects any other combination. Letters are quoted the same way; a letter quoted without `envelope_style` is priced for the plain white envelope.
 
 ## Create an order
 
@@ -124,6 +124,8 @@ Letters go in an envelope. Ballpoint addresses the envelope by hand and applies 
 | `greeting_letter` | A 6.57 x 5 inch card: your logo and your website | The message, written in pen after the card is cut, and the envelope address | `message` or `message_parts`, `logo`, `sender.website` |
 
 **Color Letter.** Send the page as `canvas_json.front` with `width: 816` and `height: 1056` (96 canvas units per inch). The canvas is not scaled: a smaller canvas prints in the top-left corner of the page and anything beyond 816 x 1056 is cut. A Color Letter without a non-empty `canvas_json.front` is rejected.
+
+**Color Letter second page.** Add `canvas_json.second_page`, a canvas the same size as the front (816 x 1056), to send a second full-color page. It is printed on a separate sheet and is the same on every letter, so it cannot carry merge fields: an order whose second page has a tag such as `{{first_name}}` is rejected. A second page adds a flat amount per letter; quote it with `"second_page": true` on `POST /v1/billing/orders/preview`.
 
 **Hybrid Letter.** The card has a fixed layout and does not use `canvas_json`. Send the letter text in `message`; it is what gets printed. To greet each recipient by name, write `{first_name}` (or `{{first_name}}`) in the message: it is replaced with the recipient's first name, or "Homeowner" when the recipient has none. It is the only tag a Hybrid letter fills in; a message with any other tag or brace, such as `{city}` or `{{last_name}}`, is rejected so that no letter prints with a gap or stray characters. Hybrid letters take their text in `message`; `message_parts` is for Greeting letters.
 

@@ -271,8 +271,7 @@ components:
       properties:
         product_type: &id012
           type: string
-          description: Product type, for example 4x6_printed or 6x9_printed. Letters cannot be quoted
-            here yet.
+          description: Product type, for example 4x6_printed, 6x9_printed or color_letter.
         postage_type: &id013
           type: string
           enum:
@@ -283,6 +282,10 @@ components:
           type: integer
           minimum: 1
           description: Number of pieces.
+        second_page:
+          type: boolean
+          description: 'color_letter only: quote the letter with a second page (canvas_json.second_page),
+            which adds a flat amount per letter.'
       required:
       - product_type
       - piece_count
@@ -373,8 +376,10 @@ components:
           description: Number of pieces; must match the recipients you upload.
         canvas_json:
           type: object
-          description: 'Fabric.js canvas with the artwork. Postcards: {front, back}. Color Letter: {front}
-            only, 816 x 1056. Not used by Hybrid or Greeting letters. Images as data: URIs.'
+          description: 'Fabric.js canvas with the artwork. Postcards: {front, back}. Color Letter: {front},
+            816 x 1056, plus an optional {second_page} of the same size, printed on a separate sheet and
+            identical on every letter (no merge fields). Not used by Hybrid or Greeting letters. Images
+            as data: URIs.'
         sender:
           $ref: '#/components/schemas/Sender'
           description: Return address, printed on postcards and written on letters.
