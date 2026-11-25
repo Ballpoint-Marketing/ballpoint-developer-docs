@@ -271,8 +271,7 @@ components:
       properties:
         product_type: &id012
           type: string
-          description: Product type, for example 4x6_printed or 6x9_printed. Letters cannot be quoted
-            here yet.
+          description: Product type, for example 4x6_printed, 6x9_printed or color_letter.
         postage_type: &id013
           type: string
           enum:
@@ -283,6 +282,10 @@ components:
           type: integer
           minimum: 1
           description: Number of pieces.
+        second_page:
+          type: boolean
+          description: 'color_letter only: quote the letter with a second page (canvas_json.second_page),
+            which adds a flat amount per letter.'
       required:
       - product_type
       - piece_count
@@ -373,15 +376,19 @@ components:
           description: Number of pieces; must match the recipients you upload.
         canvas_json:
           type: object
-          description: 'Fabric.js canvas with the artwork. Postcards: {front, back}. Color Letter: {front}
-            only, 816 x 1056. Not used by Hybrid or Greeting letters. Images as data: URIs.'
+          description: 'Fabric.js canvas with the artwork. Postcards: {front, back}. Color Letter: {front},
+            816 x 1056, plus an optional {second_page} of the same size, printed on a separate sheet and
+            identical on every letter (no merge fields). Not used by Hybrid or Greeting letters. Images
+            as data: URIs.'
         sender:
           $ref: '#/components/schemas/Sender'
           description: Return address, printed on postcards and written on letters.
         message:
           type: string
-          description: Letter text, needed for Hybrid and Greeting letters. Not checked when the order
-            is created.
+          description: 'Letter text. Required for Hybrid and Greeting letters (or message_parts on Greeting):
+            an order without it, or with text the card cannot hold, is rejected with 400 INVALID_PRODUCT_CONFIG.
+            On Hybrid letters {first_name} or {{first_name}} is replaced with the recipient''s first name;
+            any other tag is rejected.'
         message_parts:
           $ref: '#/components/schemas/MessageParts'
           description: Greeting letter text split into greeting, body and signature. If message is also
@@ -389,7 +396,7 @@ components:
         logo:
           type: string
           description: Logo printed on Hybrid and Greeting letters, as a base64 data:image URI (PNG, JPEG,
-            GIF or WebP, up to 450 KB).
+            GIF or WebP, up to 450 KB). A link or an unreadable image is rejected with 400 INVALID_PRODUCT_CONFIG.
         print_font:
           type: string
           enum:
