@@ -2,7 +2,7 @@
 
 Changes to the routes, fields and events documented in this repository.
 
-## Unreleased
+## 2026-11-25
 
 - Letters can be quoted on `POST /v1/billing/orders/preview`; without `envelope_style` a letter is priced for the plain white envelope.
 - Color Letter second page: optional `canvas_json.second_page`, a separate sheet that is the same on every letter (no merge fields). It adds a flat amount per letter; quote it with `"second_page": true`.
